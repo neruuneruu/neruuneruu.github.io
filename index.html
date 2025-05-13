@@ -3,9 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pixel Ad Board</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <title>Open PR Wall</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDehPToezGThsJFKC_pd2YwZFThv4u6muA",
+      authDomain: "gechupro.firebaseapp.com",
+      projectId: "gechupro",
+      storageBucket: "gechupro.firebasestorage.app",
+      messagingSenderId: "1078057844815",
+      appId: "1:1078057844815:web:cd35de9ff7ca5672dcaa3a",
+      measurementId: "G-KJ2L82PJMK"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    window.signInWithGoogle = () => {
+      signInWithPopup(auth, provider)
+        .then((result) => {
+          const user = result.user;
+          if (user.email === "solomon05119@gmail.com") {
+            window.isAdmin = true;
+            alert("운영자 모드가 활성화되었습니다.");
+          } else {
+            window.isAdmin = false;
+            alert("로그인 완료: 일반 사용자로 등록 가능.");
+          }
+        })
+        .catch((error) => {
+          console.error("로그인 오류:", error);
+          alert("로그인 실패: 콘솔을 확인하세요.");
+        });
+    };
+  </script>
   <style>
     body {
       background: #ffffff;
@@ -27,15 +61,13 @@
       margin-right: 10px;
     }
     .image-zone {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      display: flex;
+      flex-direction: column;
       gap: 10px;
       width: 100%;
       max-width: 800px;
     }
     .block {
-      width: 100%;
-      aspect-ratio: 1 / 1;
       background-color: #fff;
       border: 1px solid #ccc;
       box-sizing: border-box;
@@ -43,119 +75,130 @@
       background-size: cover;
       background-position: center;
       display: flex;
-      justify-content: center;
+      justify-content: space-between;
       align-items: center;
       font-size: 12px;
-      text-align: center;
-      overflow: hidden;
+      padding: 10px;
       word-break: break-word;
+    }
+    .block-text {
+      flex: 1;
+      text-align: left;
+    }
+    .delete-button {
+      display: none;
+      background: red;
+      color: white;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .block:hover .delete-button {
+      display: inline;
     }
   </style>
 </head>
 <body>
-  <h1>Pixel Ad Board</h1>
+  <h1>Open PR Wall - 누구나 올리는 광고 게시판</h1>
   <div class="toolbar">
     <input type="file" id="imageUploader" accept="image/*" style="display:none" />
-    <button onclick="clearAll()">전체 지우기</button>
-    <button onclick="signInWithGoogle()">운영자 로그인</button>
   </div>
+  <button onclick="signInWithGoogle()" style="position: fixed; bottom: 10px; right: 10px; opacity: 0.4; font-size: 12px;">운영자 로그인</button>
+  </div>
+  <button id="addPostBtn" style="margin-bottom: 20px;">글 등록하기</button>
   <div class="image-zone" id="imageZone"></div>
 
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDehPT0ezGThsJFKC_pd2YwZFThv4u6muA",
-      authDomain: "gechupro.firebaseapp.com",
-      projectId: "gechupro",
-      storageBucket: "gechupro.appspot.com",
-      messagingSenderId: "1078057844815",
-      appId: "1:1078057844815:web:0e69ba7843295a2fdcaa3a"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    let isAdmin = false;
-    const adminEmail = "solomon05119@gmail.com";
-
-    function signInWithGoogle() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .then((result) => {
-          const user = result.user;
-          if (user.email === adminEmail) {
-            isAdmin = true;
-            alert("운영자 모드가 활성화되었습니다.");
-          } else {
-            alert("운영자가 아닙니다.");
-          }
-        })
-        .catch((error) => {
-          console.error("로그인 오류:", error);
-          alert("로그인 실패: 콘솔을 확인하세요.");
-        });
-    }
-
     const imageUploader = document.getElementById('imageUploader');
     const imageZone = document.getElementById('imageZone');
-    const imageData = JSON.parse(localStorage.getItem('imageBlocks') || '{}');
+    const raw = localStorage.getItem('imageBlocks');
+    const imageData = raw ? JSON.parse(raw) : [];
 
-    const TOTAL_BLOCKS = 20;
-
-    for (let i = 0; i < TOTAL_BLOCKS; i++) {
+    imageData.forEach((item, index) => {
       const block = document.createElement('div');
       block.className = 'block';
-      const id = 'img-' + i;
+      block.onclick = () => window.open(item.link, '_blank');
 
-      if (imageData[id]) {
-        if (imageData[id].image) block.style.backgroundImage = `url(${imageData[id].image})`;
-        if (imageData[id].text) block.textContent = imageData[id].text;
-        block.title = imageData[id].link;
-        block.addEventListener('click', () => {
-          window.open(imageData[id].link, '_blank');
-        });
+      const content = document.createElement('div');
+      content.className = 'block-text';
+      if (item.image) {
+        block.style.backgroundImage = `url(${item.image})`;
+        block.style.backgroundSize = 'cover';
+        block.style.backgroundRepeat = 'no-repeat';
+        block.style.height = '120px';
       } else {
-        block.addEventListener('click', () => {
-          if (!isAdmin) {
-            alert("운영자만 광고를 등록할 수 있습니다.");
-            return;
-          }
-          const choice = prompt('무엇을 넣을까요?\n1. 이미지\n2. 텍스트');
-          if (choice === '1') {
-            imageUploader.onchange = function () {
-              const file = imageUploader.files[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = function () {
-                const base64 = reader.result;
-                const link = prompt('링크를 입력하세요');
-                if (link) {
-                  imageData[id] = { image: base64, link };
-                  localStorage.setItem('imageBlocks', JSON.stringify(imageData));
-                  location.reload();
-                }
-              };
-              reader.readAsDataURL(file);
-              imageUploader.onchange = null;
-              imageUploader.value = '';
-            };
-            imageUploader.click();
-          } else if (choice === '2') {
-            const text = prompt('표시할 텍스트 입력');
-            const link = prompt('링크 입력');
-            if (text && link) {
-              imageData[id] = { text, link };
+        content.textContent = item.text;
+      }
+      block.appendChild(content);
+
+      if (window.isAdmin) {
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '삭제';
+        delBtn.className = 'delete-button';
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          imageData.splice(index, 1);
+          localStorage.setItem('imageBlocks', JSON.stringify(imageData));
+          location.reload();
+        };
+        block.appendChild(delBtn);
+      }
+
+      imageZone.appendChild(block);
+    });
+
+    document.getElementById('addPostBtn').addEventListener('click', () => {
+      const choice = prompt('무엇을 넣을까요?
+1. 이미지
+2. 텍스트');
+      if (choice === '1') {
+        imageUploader.onchange = function () {
+          const file = imageUploader.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = function () {
+            const base64 = reader.result;
+            const link = prompt('링크를 입력하세요');
+            if (link) {
+              imageData.unshift({ image: base64, link });
               localStorage.setItem('imageBlocks', JSON.stringify(imageData));
               location.reload();
             }
-          }
-        });
+          };
+          reader.readAsDataURL(file);
+          imageUploader.onchange = null;
+          imageUploader.value = '';
+        };
+        imageUploader.click();
+      } else if (choice === '2') {
+        const text = prompt('표시할 텍스트 입력');
+        const link = prompt('링크 입력');
+        if (text && link) {
+          imageData.unshift({ text, link });
+          localStorage.setItem('imageBlocks', JSON.stringify(imageData));
+          location.reload();
+        }
       }
-      imageZone.appendChild(block);
-    }
-
-    function clearAll() {
-      localStorage.removeItem('imageBlocks');
-      location.reload();
-    }
+    });
+              localStorage.setItem('imageBlocks', JSON.stringify(imageData));
+              location.reload();
+            }
+          };
+          reader.readAsDataURL(file);
+          imageUploader.onchange = null;
+          imageUploader.value = '';
+        };
+        imageUploader.click();
+      } else if (choice === '2') {
+        const text = prompt('표시할 텍스트 입력');
+        const link = prompt('링크 입력');
+        if (text && link) {
+          imageData.unshift({ text, link });
+          localStorage.setItem('imageBlocks', JSON.stringify(imageData));
+          location.reload();
+        }
+      }
+    });
   </script>
 </body>
 </html>
