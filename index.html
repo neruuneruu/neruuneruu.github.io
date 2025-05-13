@@ -138,6 +138,7 @@
         block.addEventListener('click', () => {
           const choice = prompt('무엇을 넣을까요?\n1. 이미지\n2. 텍스트');
           if (choice === '1') {
+            imageUploader.onchange = null;
             imageUploader.onchange = function () {
               const file = imageUploader.files[0];
               if (!file) return;
@@ -152,6 +153,7 @@
                 }
               };
               reader.readAsDataURL(file);
+              imageUploader.onchange = null;
               imageUploader.value = '';
             };
             imageUploader.click();
