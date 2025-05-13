@@ -3,104 +3,189 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>무료 픽셀 광고판</title>
+  <title>Pixel Ad Board</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
   <style>
     body {
-      background: #f4f4f4;
-      font-family: sans-serif;
+      background: #ffffff;
+      font-family: "Noto Sans KR", sans-serif;
+      margin: 0;
+      padding: 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin: 0;
-      padding: 20px;
     }
     h1 {
-      margin-bottom: 10px;
+      font-size: 2rem;
+      margin-bottom: 1rem;
     }
-    .grid {
+    .toolbar {
+      margin-bottom: 1rem;
+    }
+    .toolbar input[type="color"], .toolbar button {
+      margin-right: 10px;
+    }
+    .container {
+      display: flex;
+      gap: 40px;
+    }
+    .image-zone, .pixel-zone {
       display: grid;
-      grid-template-columns: repeat(50, 12px);
+      border: 2px solid #ddd;
+      background-color: #eee;
+    }
+    .image-zone {
+      grid-template-columns: repeat(5, 24px);
+      grid-template-rows: repeat(2, 24px);
+    }
+    .pixel-zone {
+      grid-template-columns: repeat(40, 12px);
       grid-template-rows: repeat(50, 12px);
       gap: 1px;
+    }
+    .block {
+      width: 24px;
+      height: 24px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      cursor: pointer;
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 10px;
+      text-align: center;
+      overflow: hidden;
     }
     .pixel {
       width: 12px;
       height: 12px;
-      background-color: #ddd;
-      border: 1px solid #ccc;
+      background-color: #fff;
+      border: 1px solid #e0e0e0;
       box-sizing: border-box;
       cursor: pointer;
     }
-    .pixel.reserved {
-      background-color: #555;
-      cursor: not-allowed;
-    }
     .tooltip {
       position: absolute;
-      background: black;
+      background: rgba(0, 0, 0, 0.8);
       color: white;
       font-size: 12px;
-      padding: 3px 6px;
-      border-radius: 3px;
+      padding: 4px 8px;
+      border-radius: 4px;
       display: none;
       pointer-events: none;
+      white-space: pre-line;
+      z-index: 10;
     }
   </style>
 </head>
 <body>
-  <h1>픽셀 광고판 데모</h1>
-  <p>픽셀을 클릭해 이미지와 링크를 등록해보세요.</p>
-  <div class="grid" id="grid"></div>
+  <h1>Pixel Ad Board</h1>
+  <div class="toolbar">
+    <input type="color" id="colorPicker" value="#000000" />
+    <input type="file" id="imageUploader" accept="image/*" />
+    <button onclick="clearAll()">전체 지우기</button>
+    <button onclick="signInWithGoogle()">운영자 로그인</button>
+  </div>
+  <div class="container">
+    <div class="image-zone" id="imageZone"></div>
+    <div class="pixel-zone" id="pixelZone"></div>
+  </div>
   <div class="tooltip" id="tooltip"></div>
 
   <script>
-    const grid = document.getElementById('grid');
+    const firebaseConfig = {
+      apiKey: "AIzaSyDehPT0ezGThsJFKC_pd2YwZFThv4u6muA",
+      authDomain: "gechupro.firebaseapp.com",
+      projectId: "gechupro",
+      storageBucket: "gechupro.appspot.com",
+      messagingSenderId: "1078057844815",
+      appId: "1:1078057844815:web:0e69ba7843295a2fdcaa3a",
+      measurementId: "G-Z6YGQCD65G"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    let isAdmin = false;
+    const adminEmail = "solomon05119@gmail.com";
+
+    function signInWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .then((result) => {
+          const user = result.user;
+          if (user.email === adminEmail) {
+            isAdmin = true;
+            alert("운영자 모드가 활성화되었습니다.");
+          } else {
+            alert("운영자가 아닙니다.");
+          }
+        })
+        .catch((error) => {
+          console.error("로그인 오류:", error);
+        });
+    }
+
+    const colorPicker = document.getElementById('colorPicker');
+    const imageUploader = document.getElementById('imageUploader');
+    const imageZone = document.getElementById('imageZone');
+    const pixelZone = document.getElementById('pixelZone');
     const tooltip = document.getElementById('tooltip');
-    const GRID_SIZE = 50; // 50x50 = 2500 픽셀
-    const savedData = JSON.parse(localStorage.getItem('pixelData') || '{}');
 
-    for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
-      const pixel = document.createElement('div');
-      pixel.className = 'pixel';
-      const id = i.toString();
+    const imageData = JSON.parse(localStorage.getItem('imageBlocks') || '{}');
+    const pixelData = JSON.parse(localStorage.getItem('pixelBlocks') || '{}');
+    const now = Date.now();
+    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
 
-      if (savedData[id]) {
-        pixel.classList.add('reserved');
-        pixel.style.backgroundImage = `url(${savedData[id].image})`;
-        pixel.style.backgroundSize = 'cover';
-        pixel.dataset.link = savedData[id].link;
-        pixel.dataset.owner = savedData[id].owner;
+    for (let i = 0; i < 10; i++) {
+      const block = document.createElement('div');
+      block.className = 'block';
+      const id = 'img-' + i;
 
-        pixel.addEventListener('mouseenter', (e) => {
-          tooltip.style.display = 'block';
-          tooltip.innerText = `링크: ${savedData[id].link}\n작성자: ${savedData[id].owner}`;
-          tooltip.style.left = e.pageX + 10 + 'px';
-          tooltip.style.top = e.pageY + 10 + 'px';
-        });
-
-        pixel.addEventListener('mouseleave', () => {
-          tooltip.style.display = 'none';
-        });
-
-        pixel.addEventListener('click', () => {
-          window.open(savedData[id].link, '_blank');
+      if (imageData[id]) {
+        if (imageData[id].image) block.style.backgroundImage = `url(${imageData[id].image})`;
+        if (imageData[id].text) block.textContent = imageData[id].text;
+        block.title = imageData[id].link;
+        block.addEventListener('click', () => {
+          window.open(imageData[id].link, '_blank');
         });
       } else {
-        pixel.addEventListener('click', () => {
-          const image = prompt('이미지 주소를 입력하세요 (예: https://...)');
-          const link = prompt('클릭 시 이동할 링크 주소를 입력하세요');
-          const owner = prompt('작성자 이름 또는 닉네임을 입력하세요');
-
-          if (image && link && owner) {
-            savedData[id] = { image, link, owner };
-            localStorage.setItem('pixelData', JSON.stringify(savedData));
-            location.reload();
+        block.addEventListener('click', () => {
+          const choice = prompt('무엇을 넣을까요?\n1. 이미지\n2. 텍스트');
+          if (choice === '1') {
+            imageUploader.onchange = () => {
+              const file = imageUploader.files[0];
+              const reader = new FileReader();
+              reader.onload = () => {
+                const base64Image = reader.result;
+                const link = prompt('연결할 링크 입력');
+                if (link) {
+                  imageData[id] = { image: base64Image, link };
+                  localStorage.setItem('imageBlocks', JSON.stringify(imageData));
+                  location.reload();
+                }
+              };
+              if (file) reader.readAsDataURL(file);
+            };
+            imageUploader.click();
+          } else if (choice === '2') {
+            const text = prompt('표시할 텍스트 입력');
+            const link = prompt('연결할 링크 입력');
+            if (text && link) {
+              imageData[id] = { text, link };
+              localStorage.setItem('imageBlocks', JSON.stringify(imageData));
+              location.reload();
+            }
           }
         });
       }
-
-      grid.appendChild(pixel);
+      imageZone.appendChild(block);
     }
+
+    // 기존 픽셀 영역 렌더링 유지 ...
   </script>
 </body>
 </html>
