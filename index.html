@@ -116,72 +116,48 @@
     const raw = localStorage.getItem('imageBlocks');
     const imageData = raw ? JSON.parse(raw) : [];
 
-    imageData.forEach((item, index) => {
-      const block = document.createElement('div');
-      block.className = 'block';
-      block.onclick = () => window.open(item.link, '_blank');
+    function renderBlocks() {
+      imageZone.innerHTML = '';
+      imageData.forEach((item, index) => {
+        const block = document.createElement('div');
+        block.className = 'block';
+        block.onclick = () => window.open(item.link, '_blank');
 
-      const content = document.createElement('div');
-      content.className = 'block-text';
-      if (item.image) {
-        block.style.backgroundImage = `url(${item.image})`;
-        block.style.backgroundSize = 'cover';
-        block.style.backgroundRepeat = 'no-repeat';
-        block.style.height = '120px';
-      } else {
-        content.textContent = item.text;
-      }
-      block.appendChild(content);
+        const content = document.createElement('div');
+        content.className = 'block-text';
+        if (item.image) {
+          block.style.backgroundImage = `url(${item.image})`;
+          block.style.backgroundSize = 'cover';
+          block.style.backgroundRepeat = 'no-repeat';
+          block.style.height = '120px';
+        } else {
+          content.textContent = item.text;
+        }
+        block.appendChild(content);
 
-      if (window.isAdmin) {
-        const delBtn = document.createElement('button');
-        delBtn.textContent = '삭제';
-        delBtn.className = 'delete-button';
-        delBtn.onclick = (e) => {
-          e.stopPropagation();
-          imageData.splice(index, 1);
-          localStorage.setItem('imageBlocks', JSON.stringify(imageData));
-          location.reload();
-        };
-        block.appendChild(delBtn);
-      }
+        if (window.isAdmin) {
+          const delBtn = document.createElement('button');
+          delBtn.textContent = '삭제';
+          delBtn.className = 'delete-button';
+          delBtn.onclick = (e) => {
+            e.stopPropagation();
+            imageData.splice(index, 1);
+            localStorage.setItem('imageBlocks', JSON.stringify(imageData));
+            renderBlocks();
+          };
+          block.appendChild(delBtn);
+        }
 
-      imageZone.appendChild(block);
-    });
+        imageZone.appendChild(block);
+      });
+    }
+
+    renderBlocks();
 
     document.getElementById('addPostBtn').addEventListener('click', () => {
-  const choice = prompt('무엇을 넣을까요?
+      const choice = prompt('무엇을 넣을까요?
 1. 이미지
 2. 텍스트');
-  if (choice === '1') {
-    imageUploader.onchange = function () {
-      const file = imageUploader.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function () {
-        const base64 = reader.result;
-        const link = prompt('링크를 입력하세요');
-        if (link) {
-          imageData.unshift({ image: base64, link });
-          localStorage.setItem('imageBlocks', JSON.stringify(imageData));
-          location.reload();
-        }
-      };
-      reader.readAsDataURL(file);
-      imageUploader.onchange = null;
-      imageUploader.value = '';
-    };
-    imageUploader.click();
-  } else if (choice === '2') {
-    const text = prompt('표시할 텍스트 입력');
-    const link = prompt('링크 입력');
-    if (text && link) {
-      imageData.unshift({ text, link });
-      localStorage.setItem('imageBlocks', JSON.stringify(imageData));
-      location.reload();
-    }
-  }
-});
       if (choice === '1') {
         imageUploader.onchange = function () {
           const file = imageUploader.files[0];
@@ -193,7 +169,7 @@
             if (link) {
               imageData.unshift({ image: base64, link });
               localStorage.setItem('imageBlocks', JSON.stringify(imageData));
-              location.reload();
+              renderBlocks();
             }
           };
           reader.readAsDataURL(file);
@@ -207,26 +183,7 @@
         if (text && link) {
           imageData.unshift({ text, link });
           localStorage.setItem('imageBlocks', JSON.stringify(imageData));
-          location.reload();
-        }
-      }
-    });
-              localStorage.setItem('imageBlocks', JSON.stringify(imageData));
-              location.reload();
-            }
-          };
-          reader.readAsDataURL(file);
-          imageUploader.onchange = null;
-          imageUploader.value = '';
-        };
-        imageUploader.click();
-      } else if (choice === '2') {
-        const text = prompt('표시할 텍스트 입력');
-        const link = prompt('링크 입력');
-        if (text && link) {
-          imageData.unshift({ text, link });
-          localStorage.setItem('imageBlocks', JSON.stringify(imageData));
-          location.reload();
+          renderBlocks();
         }
       }
     });
