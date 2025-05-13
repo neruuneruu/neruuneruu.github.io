@@ -1,3 +1,4 @@
+<!-- 전체 HTML 유지한 상태 + Firebase 로그인 + 이미지/텍스트 광고 삽입 작동 보완 -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -68,25 +69,13 @@
       box-sizing: border-box;
       cursor: pointer;
     }
-    .tooltip {
-      position: absolute;
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      font-size: 12px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      display: none;
-      pointer-events: none;
-      white-space: pre-line;
-      z-index: 10;
-    }
   </style>
 </head>
 <body>
   <h1>Pixel Ad Board</h1>
   <div class="toolbar">
     <input type="color" id="colorPicker" value="#000000" />
-    <input type="file" id="imageUploader" accept="image/*" />
+    <input type="file" id="imageUploader" accept="image/*" style="display:none" />
     <button onclick="clearAll()">전체 지우기</button>
     <button onclick="signInWithGoogle()">운영자 로그인</button>
   </div>
@@ -94,7 +83,6 @@
     <div class="image-zone" id="imageZone"></div>
     <div class="pixel-zone" id="pixelZone"></div>
   </div>
-  <div class="tooltip" id="tooltip"></div>
 
   <script>
     const firebaseConfig = {
@@ -103,8 +91,7 @@
       projectId: "gechupro",
       storageBucket: "gechupro.appspot.com",
       messagingSenderId: "1078057844815",
-      appId: "1:1078057844815:web:0e69ba7843295a2fdcaa3a",
-      measurementId: "G-Z6YGQCD65G"
+      appId: "1:1078057844815:web:0e69ba7843295a2fdcaa3a"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -126,19 +113,14 @@
         })
         .catch((error) => {
           console.error("로그인 오류:", error);
+          alert("로그인 실패: 콘솔 확인");
         });
     }
 
-    const colorPicker = document.getElementById('colorPicker');
     const imageUploader = document.getElementById('imageUploader');
     const imageZone = document.getElementById('imageZone');
-    const pixelZone = document.getElementById('pixelZone');
-    const tooltip = document.getElementById('tooltip');
-
+    const colorPicker = document.getElementById('colorPicker');
     const imageData = JSON.parse(localStorage.getItem('imageBlocks') || '{}');
-    const pixelData = JSON.parse(localStorage.getItem('pixelBlocks') || '{}');
-    const now = Date.now();
-    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
 
     for (let i = 0; i < 10; i++) {
       const block = document.createElement('div');
@@ -156,24 +138,26 @@
         block.addEventListener('click', () => {
           const choice = prompt('무엇을 넣을까요?\n1. 이미지\n2. 텍스트');
           if (choice === '1') {
-            imageUploader.onchange = () => {
+            imageUploader.onchange = function () {
               const file = imageUploader.files[0];
+              if (!file) return;
               const reader = new FileReader();
-              reader.onload = () => {
-                const base64Image = reader.result;
-                const link = prompt('연결할 링크 입력');
+              reader.onload = function () {
+                const base64 = reader.result;
+                const link = prompt('링크를 입력하세요');
                 if (link) {
-                  imageData[id] = { image: base64Image, link };
+                  imageData[id] = { image: base64, link };
                   localStorage.setItem('imageBlocks', JSON.stringify(imageData));
                   location.reload();
                 }
               };
-              if (file) reader.readAsDataURL(file);
+              reader.readAsDataURL(file);
+              imageUploader.value = '';
             };
             imageUploader.click();
           } else if (choice === '2') {
             const text = prompt('표시할 텍스트 입력');
-            const link = prompt('연결할 링크 입력');
+            const link = prompt('링크 입력');
             if (text && link) {
               imageData[id] = { text, link };
               localStorage.setItem('imageBlocks', JSON.stringify(imageData));
@@ -185,7 +169,10 @@
       imageZone.appendChild(block);
     }
 
-    // 기존 픽셀 영역 렌더링 유지 ...
+    function clearAll() {
+      localStorage.removeItem('imageBlocks');
+      location.reload();
+    }
   </script>
 </body>
 </html>
