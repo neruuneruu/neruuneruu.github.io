@@ -1,57 +1,103 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pixel Grid Homepage</title>
+  <title>무료 픽셀 광고판</title>
   <style>
     body {
-      background: #f0f0f0;
+      background: #f4f4f4;
+      font-family: sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
     }
     h1 {
-      margin-top: 20px;
+      margin-bottom: 10px;
     }
     .grid {
       display: grid;
-      grid-template-columns: repeat(50, 10px);
-      grid-template-rows: repeat(50, 10px);
+      grid-template-columns: repeat(50, 12px);
+      grid-template-rows: repeat(50, 12px);
       gap: 1px;
-      margin: 20px;
     }
     .pixel {
-      width: 10px;
-      height: 10px;
-      background-color: #ccc;
+      width: 12px;
+      height: 12px;
+      background-color: #ddd;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
       cursor: pointer;
     }
-    .pixel:hover {
-      outline: 1px solid #000;
+    .pixel.reserved {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+    .tooltip {
+      position: absolute;
+      background: black;
+      color: white;
+      font-size: 12px;
+      padding: 3px 6px;
+      border-radius: 3px;
+      display: none;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <h1>무료 픽셀 광고판</h1>
-  <div class="grid" id="pixelGrid"></div>
+  <h1>픽셀 광고판 데모</h1>
+  <p>픽셀을 클릭해 이미지와 링크를 등록해보세요.</p>
+  <div class="grid" id="grid"></div>
+  <div class="tooltip" id="tooltip"></div>
 
   <script>
-    const grid = document.getElementById('pixelGrid');
-    const totalPixels = 50 * 50; // 50x50 = 2500 픽셀
+    const grid = document.getElementById('grid');
+    const tooltip = document.getElementById('tooltip');
+    const GRID_SIZE = 50; // 50x50 = 2500 픽셀
+    const savedData = JSON.parse(localStorage.getItem('pixelData') || '{}');
 
-    for (let i = 0; i < totalPixels; i++) {
+    for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
       const pixel = document.createElement('div');
       pixel.className = 'pixel';
+      const id = i.toString();
 
-      // 클릭 시 링크 열기 (예시용, 향후 사용자 설정 가능하게 할 수 있음)
-      pixel.addEventListener('click', () => {
-        const url = prompt('이 픽셀에 연결할 URL을 입력하세요:');
-        if (url) {
-          window.open(url, '_blank');
-        }
-      });
+      if (savedData[id]) {
+        pixel.classList.add('reserved');
+        pixel.style.backgroundImage = `url(${savedData[id].image})`;
+        pixel.style.backgroundSize = 'cover';
+        pixel.dataset.link = savedData[id].link;
+        pixel.dataset.owner = savedData[id].owner;
+
+        pixel.addEventListener('mouseenter', (e) => {
+          tooltip.style.display = 'block';
+          tooltip.innerText = `링크: ${savedData[id].link}\n작성자: ${savedData[id].owner}`;
+          tooltip.style.left = e.pageX + 10 + 'px';
+          tooltip.style.top = e.pageY + 10 + 'px';
+        });
+
+        pixel.addEventListener('mouseleave', () => {
+          tooltip.style.display = 'none';
+        });
+
+        pixel.addEventListener('click', () => {
+          window.open(savedData[id].link, '_blank');
+        });
+      } else {
+        pixel.addEventListener('click', () => {
+          const image = prompt('이미지 주소를 입력하세요 (예: https://...)');
+          const link = prompt('클릭 시 이동할 링크 주소를 입력하세요');
+          const owner = prompt('작성자 이름 또는 닉네임을 입력하세요');
+
+          if (image && link && owner) {
+            savedData[id] = { image, link, owner };
+            localStorage.setItem('pixelData', JSON.stringify(savedData));
+            location.reload();
+          }
+        });
+      }
 
       grid.appendChild(pixel);
     }
